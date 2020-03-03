@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+  <head>
+
+    <style>
+      rect.bordered {
+        stroke: #A1A1A1;
+        stroke-width:1px;
+      }
+
+      text.mono {
+        font-size: 9pt;
+        font-family: Consolas, courier;
+        fill: #000;
+      }
+
+      text.axis-workweek {
+        fill: #000;
+      }
+
+      text.axis-worktime {
+        fill: #000;
+      }
+    </style>
+
+    <script type="text/javascript" src="js/d3.js"></script>
+  </head>
+
+
+  <body>
+    <div id="chart"></div>        <!-- div定义一个大块 -->
+    <div id="newdiv"></div>        <!-- div定义一个大块 -->
+    <div class="nameLabel"></div>
+    <script type="text/javascript">
+    var array_data = [];
+      var margin = { top: 50, right: 0, bottom: 100, left: 150 },
+          width = 960 - margin.left - margin.right,
+          height = 1830 - margin.top - margin.bottom,
+          gridSize = Math.floor(width / 24),
+          legendElementWidth = gridSize * 2,
+          buckets = 9,
+          colors = ["#ffffd9","#edf8b1","#c7e9b4","#7fcdbb","#41b6c4","#1d91c0","#225ea8","#253494","#081d58"],
+          tests = ["G","MIN","PTS","FGM","FGA","FGP","FTM","FTA","FTP","3PM","3PA","3PP","ORB","DRB","TRB","AST","STL","BLK","TO","PF"];
+
+          d3.csv("ball_data.csv").then(function(data){
+                console.log(data);
+                console.log("yes!")
+              var colorScale = d3.scaleQuantile()
+                  .domain([0, buckets - 1, d3.max(data, function (d) { return d.G; })])
+                  .range(colors);
+
+              var svg = d3.select("#chart").append("svg")
+                  .attr("width", width + margin.left + margin.right)
+                  .attr("height", height + margin.top + margin.bottom)
+                  .append("g")
+                  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+              var dayLabels = svg.selectAll(".nameLabel")
+                  .data(data)
+                  .enter()
+                  .append("text")
+                    .text(function (d, i) { return data[i].name; })
+                    .attr("x", 0)
+                    .attr("y", function (d, i) { return i * gridSize; })
+                    .style("text-anchor", "end")
+                    .attr("transform", "translate(-6," + gridSize / 1.5 + ")")
+                    .attr("class", function (d, i)
+                            { return ((i >= 0 && i <= 4) ? "nameLabel mono axis axis-workweek" : "nameLabel mono axis"); }
+                        );
+
+              var timeLabels = svg.selectAll(".testLabel")
+                  .data(tests)
+                  .enter().append("text")
+                    .text(function(d) { return d; })
+                    .attr("x", function(d, i) { return i * gridSize; })
+                    .attr("y", 0)
+                    .style("text-anchor", "middle")
+                    .attr("transform", "translate(" + gridSize / 2 + ", -6)")
+                    .attr("class", function(d, i) {
+                            return ((i >= 7 && i <= 16) ? "testLabel mono axis axis-worktime" : "testLabel mono axis"); }
+                         );
+
+                for (var i = 0; i <data.length; i++){
+                    array_data[i*20] = data[i].G;
+                    array_data[i*20+1] = data[i].MIN;
+                    array_data[i*20+2] = data[i].PTS;
+                    array_data[i*20+3] = data[i].FGM;
+                    array_data[i*20+4] = data[i].FGA;
+                    array_data[i*20+5] = data[i].FGP;
+                    array_data[i*20+6] = data[i].FTM;
+                    array_data[i*20+7] = data[i].FTA;
+                    array_data[i*20+8] = data[i].FTP;
+                    array_data[i*20+9] = data[i].P3PM;
+                    array_data[i*20+10] = data[i].P3PA;
+                    array_data[i*20+11] = data[i].P3PP;
+                    array_data[i*20+12] = data[i].ORB;
+                    array_data[i*20+13] = data[i].DRB;
+                    array_data[i*20+14] = data[i].TRB;
+                    array_data[i*20+15] = data[i].AST;
+                    array_data[i*20+16] = data[i].STL;
+                    array_data[i*20+17] = data[i].BLK;
+                    array_data[i*20+18] = data[i].TO;
+                    array_data[i*20+19] = data[i].PF;
+              }
+
+              var heatMap = svg.selectAll(".score")
+                  .data(array_data)
+                  .enter()
+                  .append("rect")
+                  .attr("x", function(d, i){ return (i % 20)*gridSize;})
+                  .attr("y", function(d, i){ return parseInt(i / 20)*gridSize;})
+                  .attr("rx", 6)
+                  .attr("ry", 6)
+                  .attr("class", "hour bordered")
+                  .attr("width", gridSize)
+                  .attr("height", gridSize)
+                  .style("fill", "#FFFFFF");
+
+              heatMap.transition().duration(1000)
+                  .style("fill", function(d) { return colorScale(d); });
+
+              heatMap.append("title").text(function(d) { return d.G; });
+
+              var legend = svg.selectAll(".legend")
+                  .data([0].concat(colorScale.quantiles()), function(d) { return d; })    // 由data获得的元素个数为7
+                  .enter().append("g")
+                  .attr("class", "legend");
+
+              legend.append("rect")
+                .attr("x", function(d, i) { return legendElementWidth * i; })
+                .attr("y", height)
+                .attr("width", legendElementWidth)
+                .attr("height", gridSize / 2)
+                .style("fill", function(d, i) { return colors[i]; });
+
+              legend.append("text")
+                .attr("class", "mono")
+                .text(function(d) { return ">= "+Math.round(d); })
+                .attr("x", function(d, i) { return legendElementWidth * i; })
+                .attr("y", height + gridSize);
+          });
+    </script>
+
+  </body>
+</html>

@@ -35,11 +35,11 @@ Inverted_termnum_dic={
     12:"17-18秋",13:"17-18寒假",14:"17-18春",15:"17-18暑假",
     16:"18-19秋",17:"18-19寒假",18:"18-19秋",19:"18-19暑假"
 }
-
+# TODO: 构建新字典
 term_info={
     "14-15秋":['2014-08-31','2015-01-17'],
+    "14-15寒假":['2015-01-17','2015-03-01'],
 }
-
 
 # 学期的开始和结束日期，用以区分寒暑假
 dates=['2014-08-31','2015-01-17','2015-03-01','2015-07-18',
@@ -195,57 +195,27 @@ def generate_newformat():
     # 新格式
     c=["学号","方案号","院系","专业","年级","学期","星期几","节数","学期第几周"]
     count=0
-    new_df= pd.DataFrame(columns=c)
+    path="./temp"
+    if not os.path.exists(path):
+        os.makedirs(path)
     # 生成教务处要求新表格
     library_df=pd.read_csv("到馆详单_change.csv",iterator=True,low_memory=False)
-    '''debug
-    library_df=pd.read_csv("到馆详单_change.csv")
-    df=library_df[library_df["学号"]==2014757104625]
-    print(df.head())
-    for index, row in df.iterrows():
-        stu=row['学号'] #学号
-        fajhh=stu_fajhh_dic[row['学号']] #方案计划号
-        school=stu_school_dic[row['学号']] #院系
-        major=stu_major_dic[row['学号']] #专业
-        grade=row['年级'] #年级
-        weekday=datetime(int(row["年"]),int(row["月"]),int(row["日"])).weekday()+1 #星期几
-        print(row["标准时间"])
-        print(cur_num(row["标准时间"]))
-        lessonnum=timenum_dic[cur_num(row["标准时间"])] #课号
-        print(lessonnum)
-        try:
-            termnum=term_num(int(row["年"]),int(row["月"]),int(row["日"])) # 学期对应编号
-            term=Inverted_termnum_dic[termnum] #学期名称，包括寒暑假
-            weeknum=calculate_weeknum(parse(dates[termnum]),datetime(int(row["年"]),int(row["月"]),int(row["日"]))) #该学期的第几周
-            for lesson in add_dic[lessonnum]:
-                new_row= pd.DataFrame([[stu,fajhh,school,major,grade,term,weekday,"第"+str(lesson)+"节",weeknum]],columns=c)
-                new_df=new_df.append(new_row,ignore_index=True)
-                for checklesson in check_dic[lessonnum]:
-                    if(check_curriculum(stu,term,weeknum,weekday,checklesson)==False):
-                        new_row= pd.DataFrame([[stu,fajhh,school,major,grade,term,weekday,"第"+str(checklesson)+"节",weeknum]],columns=c)
-                        new_df=new_df.append(new_row,ignore_index=True)
-        except Exception:
-            count+=1
-            print("count="+str(count))
-            print("------")
-
-    '''
     chunkSize=5000
     loop=True
     num=0
     while loop:
         try:
             chunk=library_df.get_chunk(chunkSize)
+            new_df= pd.DataFrame(columns=c)
             for index, row in chunk.iterrows():
-                print(index)
                 stu=row['学号'] #学号
-                fajhh=stu_fajhh_dic[row['学号']] #方案计划号
-                school=stu_school_dic[row['学号']] #院系
-                major=stu_major_dic[row['学号']] #专业
                 grade=row['年级'] #年级
                 weekday=datetime(int(row["年"]),int(row["月"]),int(row["日"])).weekday()+1 #星期几
                 lessonnum=timenum_dic[cur_num(row["标准时间"])] #课号
                 try:
+                    fajhh=stu_fajhh_dic[row['学号']] #方案计划号
+                    school=stu_school_dic[row['学号']] #院系
+                    major=stu_major_dic[row['学号']] #专业
                     termnum=term_num(int(row["年"]),int(row["月"]),int(row["日"])) # 学期对应编号
                     term=Inverted_termnum_dic[termnum] #学期名称，包括寒暑假
                     weeknum=calculate_weeknum(parse(dates[termnum]),datetime(int(row["年"]),int(row["月"]),int(row["日"]))) #该学期的第几周
@@ -259,35 +229,28 @@ def generate_newformat():
                 except Exception:
                     count+=1
                     print("count="+str(count))
-                    print("------")
-                    #new_df.to_csv("wrong.csv",index=False,encoding="UTF_8_sig")
             num+=1
-            filename="./temp"+str(num)+".csv"
+            filename=path+"/tmp"+str(num)+".csv"
             print(filename)
             new_df.to_csv(filename,index=False,encoding="UTF_8_sig")
             del chunk
+            del new_df
             gc.collect()
         except StopIteration:
             loop=False
             print("迭代停止")
-    new_df.drop_duplicates(inplace=True)    #去重
-    new_df.to_csv("./图书馆.csv",index=False,encoding="UTF_8_sig")
+
+    # 重新读取csv
+    dirs = os.listdir(path)
+    combined_df=pd.DataFrame(columns=c)
+    for file in dirs:
+        print(path+"/"+file)
+        tmp=pd.read_csv(path+"/"+file)
+        combined_df=combined_df.append(tmp,ignore_index=True)
+        del tmp
+    combined_df.drop_duplicates(inplace=True)    #去重
+    combined_df.to_csv("./图书馆.csv",index=False,encoding="UTF_8_sig")
 
 if __name__ == "__main__":
-    #curriculum("./to_file")
-    #compute_major()
     generate_newformat()
-    #a=cur_num("8:31:00")
-    #print(a)
-    '''
-    14-15秋 2014-08-31 2015-01-17 0
-    14-15春 2015-03-01 2015-07-18 2
-    15-16秋 2015-09-06 2016-01-23 4
-    15-16春 2016-02-28 2016-07-16 6
-    16-17秋 2016-09-04 2017-01-14 8
-    16-17春 2017-02-26 2017-07-15 10
-    17-18秋 2017-09-03 2018-01-20 12
-    17-18春 2018-03-04 2018-07-21 14
-    18-19秋 2018-09-02 2019-01-19 16
-    18-19春 2019-02-24 2019-07-13 18
-    '''
+

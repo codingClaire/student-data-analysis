@@ -1,0 +1,211 @@
+<html>
+<head>
+<meta charset ="utf-8">
+<script src="js/d3.min.js"></script>
+<style>	
+body {
+	margin: auto;
+	width: 650px;
+	font: 12px arial;
+}
+</style>
+</head>
+
+<body>
+<svg id="chart" width="650" height="600"></svg>
+学期: 
+<select id="term"></select>
+方案计划号：
+<select id="fajhh"></select>
+<script>
+
+var alljson={
+    "1":{
+        "12":{ //第2节
+            libr:19, 
+            curri:[{
+                aver:18/20,
+                t:5,
+            }],
+        }
+    },
+    "7":{
+        "3":{
+            libr:15, 
+            curri:[{
+                aver:16/20,
+                t:7,
+            },{
+                aver:20/20,
+                t:20,
+            }],
+        }
+    },
+};
+
+// svg元素
+var svg = d3.select("#chart"),
+        margin = {top: 35, left: 35, bottom:35, right:40},
+        width = +svg.attr("width") - margin.left - margin.right,
+        height = +svg.attr("height") - margin.top - margin.bottom;
+    
+//星期轴
+var offset=10;
+//var xrange=[width/14,3*width/14,5*width/14,7*width/14,9*width/14,11*width/14,13*width/14];
+var xrange=[width/8,2*width/8,3*width/8,4*width/8,5*width/8,6*width/8,7*width/8,]
+var xdomain=["周一","周二","周三","周四","周五","周六","周日"];
+var curiculumList=["第1节","第2节","第3节","第4节",
+                   "第5节","第6节","第7节","第8节","第9节",
+                   "第10节","第11小节","第12小节"];
+var r=[20,40,60,80,110,130,150,170,190,220,240,260]; //课程布局
+for(let j=0;j<r.length;j++){
+    r[j]=r[j]*2-5;
+}
+
+generateChart(alljson);
+function generateChart(alljson){
+    var weekday=d3.scaleOrdinal()
+        .domain(xdomain)
+        .range(xrange)
+    var weekdayAxis=svg.append("g")
+        .attr("transform",`translate(${margin.left+offset},${margin.top+offset})`)
+        .attr("class","weekday-axis")
+    svg.selectAll(".weekday-axis").transition().duration(0)
+        .call(d3.axisTop().scale(weekday));
+    
+    var curri=d3.scaleOrdinal()
+        .domain(curiculumList)
+        .range(r);
+    var curriAxis=svg.append("g")
+        .attr("transform",`translate(${1*width/8+margin.left},${margin.top})`)
+        .attr("class","curri-axis");
+    svg.selectAll(".curri-axis").transition().duration(0)
+        .call(d3.axisLeft().scale(curri));
+    var axisWidth=width/8-10;
+    var maxValue=getMaxnumInJson(alljson);
+    for(let k=0;k<xrange.length;k++){
+        generateVerticalLine(xrange[k]+margin.left+offset);
+        generateHorizontalLine(maxValue,xrange[k],offset,axisWidth);
+    }
+    generateRectangle(maxValue,axisWidth);
+}
+
+function getMaxnumInJson(alljson){
+    //获取所有数据的最大值，用于更新横轴
+    var maxList=[];
+    Object.keys(alljson).forEach(function(weekday){
+        Object.keys(alljson[weekday]).forEach(function(curritime){
+            maxList.push(alljson[weekday][curritime]["libr"]);
+            Object.keys(alljson[weekday][curritime]["curri"]).forEach(function(d){
+                maxList.push(alljson[weekday][curritime]["curri"][d]["t"]);
+            });
+        });
+    });
+    var maxValue = d3.max(maxList);
+    return maxValue;
+}
+
+function generateVerticalLine(x){
+    //生成竖轴
+    var vertical=svg.append("line")
+        .attr("x1",x)
+        .attr("y1",r[0]+margin.top-5)
+        .attr("x2",x)
+        .attr("y2",r[11]+margin.top+20)
+        .attr("stroke", "#000")
+        .attr("class","mon");
+}
+
+function generateHorizontalLine(maxnum,x,offset,axisWidth){
+    //生成横轴
+    var times=d3.scaleLinear()
+        .domain([0,maxnum])
+        .range([0,axisWidth])
+    var timesAxis=svg.append("g")
+        .attr("transform",`translate(${x+margin.left+offset},${r[11]+margin.top+20})`)
+        .attr("class","times-axis")
+    svg.selectAll(".times-axis").transition().duration(0)
+        .call(d3.axisBottom()
+                .scale(times)
+                .ticks(5));
+}
+
+function generateRectangle(maxValue,axisWidth){
+    //生成矩形
+    Object.keys(alljson).forEach(function(weekday){
+        Object.keys(alljson[weekday]).forEach(function(curritime){
+            var demorec=svg.append("rect")
+                .attr("x",xrange[parseInt(weekday)-1]+margin.left+offset)
+                .attr("y",r[parseInt(curritime)-1]+margin.top-10)
+                .attr("width",alljson[weekday][curritime]["libr"]/maxValue*axisWidth)
+                .attr("height",10)
+                .attr("fill","red");
+            Object.keys(alljson[weekday][curritime]["curri"]).forEach(function(d){
+                console.log(parseFloat(alljson[weekday][curritime]["curri"][d]["aver"])*20);
+                var demorec=svg.append("rect")
+                    .attr("x",xrange[parseInt(weekday)-1]+margin.left+offset)
+                    .attr("y",r[parseInt(curritime)-1]+margin.top)
+                    .attr("width",alljson[weekday][curritime]["curri"][d]["t"]/maxValue*axisWidth)
+                    .attr("height",parseFloat(alljson[weekday][curritime]["curri"][d]["aver"])*10)
+                    .attr("fill","blue");
+            });
+        });
+    });
+}
+
+
+
+
+ 
+    /*
+    var group = svg.selectAll("g.layer")
+			.data(d3.stack().keys(keys)(data), d => d.key)
+	group.exit().remove()
+    group.enter().append("g")
+        .classed("layer", true)
+        .attr("fill", d => z(d.key));
+
+    var bars = svg.selectAll("g.layer").selectAll("rect")
+        .data(d => d, e => e.data.curri);
+
+    bars.exit().remove()
+    //矩形绘制
+    bars.enter().append("rect")
+        .attr("width", x.bandwidth())
+        .merge(bars)
+    .transition().duration(speed)
+        .attr("x", d => x(d.data.curri))
+        .attr("y", d => y(d[1]))
+        .attr("height", d => y(d[0]) - y(d[1]))
+    */
+
+
+
+</script>
+<style>
+    .weekday-axis path {
+        display: none;
+    }
+    .weekday-axis line{
+        display:none;
+    }
+    .curri-axis path {
+        display: none;
+    }
+    .curri-axis line {
+        display:none;
+    }
+    /*
+    .times-axis path {
+        display:none;
+    }
+    
+    .times-axis line{
+        display:none;
+    }
+    */
+</style>
+</body>
+
+</html> 
+

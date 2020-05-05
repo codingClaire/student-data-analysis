@@ -14,6 +14,6 @@
 | ------------------------------------------------------------ | ----------------------------------------- |
 | [major](https://github.com/codingClaire/student-data-analysis/tree/master/major) | 专业和图书馆聚类分析的相关性分析          |
 | [time_series](https://github.com/codingClaire/student-data-analysis/tree/master/time_series) | 图书馆数据的ARIMA分析                     |
-| [combine_heatmap]()                                          | 图书馆+课表的融合展示（python与部分D3.js) |
+| [combine_heatmap](https://github.com/codingClaire/student-data-analysis/tree/master/combine_heatmap) | 图书馆+课表的融合展示（python与部分D3.js) |
 | [jiaowuchu-dataformat](https://github.com/codingClaire/student-data-analysis/tree/master/jiaowuchu-dataformat) | 将图书馆数据、课表数据处理为要求格式      |
 

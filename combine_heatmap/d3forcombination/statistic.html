@@ -12,11 +12,14 @@ body {
 </head>
 
 <body>
-<svg id="chart" width="650" height="600"></svg>
-学期: 
+<h1>课程和图书馆统计</h1>
+学期：
 <select id="term"></select>
 方案计划号：
 <select id="fajhh"></select>
+<svg id="chart" width="800" height="600"></svg>
+学期: 
+
 <script>
 
 var alljson={
@@ -82,16 +85,21 @@ function generateChart(alljson){
     svg.selectAll(".curri-axis").transition().duration(0)
         .call(d3.axisLeft().scale(curri));
     var axisWidth=width/8-10;
-    var maxValue=getMaxnumInJson(alljson);
+    var maxValue=getMaxnumInJson(alljson); //获取数据的最大值
+    var libraryColor="#E5D461";
+    var curriLengthColorDic=getLengthColorDic(alljson);
+    //console.log(curriLengthColorDic);
     for(let k=0;k<xrange.length;k++){
         generateVerticalLine(xrange[k]+margin.left+offset);
         generateHorizontalLine(maxValue,xrange[k],offset,axisWidth);
     }
-    generateRectangle(maxValue,axisWidth);
+    generateRectangle(maxValue,axisWidth,curriLengthColorDic,libraryColor);
+    generateExample(curriLengthColorDic,libraryColor);
 }
 
 function getMaxnumInJson(alljson){
     //获取所有数据的最大值，用于更新横轴
+    /*
     var maxList=[];
     Object.keys(alljson).forEach(function(weekday){
         Object.keys(alljson[weekday]).forEach(function(curritime){
@@ -101,8 +109,59 @@ function getMaxnumInJson(alljson){
             });
         });
     });
+    */
+    var maxList=[];
+    Object.keys(alljson).forEach(function(weekday){
+        Object.keys(alljson[weekday]).forEach(function(curritime){
+            var tmp=alljson[weekday][curritime]["libr"];
+            Object.keys(alljson[weekday][curritime]["curri"]).forEach(function(d){
+                tmp+=alljson[weekday][curritime]["curri"][d]["t"];
+            });
+            maxList.push(tmp);
+        });
+    });
+    //console.log(maxList);
     var maxValue = d3.max(maxList);
     return maxValue;
+}
+
+function quickSort(arr) {
+    if(arr.length == 0) {
+        return [];    // 返回空数组
+    }
+    let cIndex = Math.floor(arr.length / 2);
+    let c = arr.splice(cIndex, 1);
+    let l = [];
+    let r = [];
+
+    for (let i = 0; i < arr.length; i++) {
+        if(arr[i] < c) {
+            l.push(arr[i]);
+        } else {
+            r.push(arr[i]);
+        }
+    }
+    return quickSort(l).concat(c, quickSort(r));
+}
+
+function getLengthColorDic(alljson){
+    var LengthColorDic={};
+    var color=["#006296","#2A82B0","#52AAC1","#94C5DB","#ABD3E0","#ACDAE0","#E0F1F4"];//深蓝色到浅蓝色
+    var curriLength=[];
+    Object.keys(alljson).forEach(function(weekday){
+        Object.keys(alljson[weekday]).forEach(function(curritime){
+            Object.keys(alljson[weekday][curritime]["curri"]).forEach(function(d){
+                curriLength.push(alljson[weekday][curritime]["curri"][d]["aver"]);
+            });
+        });
+    });
+    //curriLength去重排序
+    curriLength=Array.from(new Set(curriLength));
+    curriLength=quickSort(curriLength);
+    for(let i=0;i<curriLength.length;i++){
+        LengthColorDic[curriLength[curriLength.length-i-1]]=color[i];
+    }
+    return LengthColorDic;
 }
 
 function generateVerticalLine(x){
@@ -130,58 +189,72 @@ function generateHorizontalLine(maxnum,x,offset,axisWidth){
                 .ticks(5));
 }
 
-function generateRectangle(maxValue,axisWidth){
+function generateRectangle(maxValue,axisWidth,curriLengthColorDic,libraryColor){
     //生成矩形
     Object.keys(alljson).forEach(function(weekday){
         Object.keys(alljson[weekday]).forEach(function(curritime){
+            var basicX=xrange[parseInt(weekday)-1]+margin.left+offset;
+            var basicY=r[parseInt(curritime)-1]+margin.top-5;
             var demorec=svg.append("rect")
-                .attr("x",xrange[parseInt(weekday)-1]+margin.left+offset)
-                .attr("y",r[parseInt(curritime)-1]+margin.top-10)
+                .attr("x",basicX)
+                .attr("y",basicY)
                 .attr("width",alljson[weekday][curritime]["libr"]/maxValue*axisWidth)
                 .attr("height",10)
-                .attr("fill","red");
+                .attr("fill",libraryColor);
+            basicX=basicX+alljson[weekday][curritime]["libr"]/maxValue*axisWidth;
             Object.keys(alljson[weekday][curritime]["curri"]).forEach(function(d){
-                console.log(parseFloat(alljson[weekday][curritime]["curri"][d]["aver"])*20);
+                //console.log(parseFloat(alljson[weekday][curritime]["curri"][d]["aver"])*20);
                 var demorec=svg.append("rect")
-                    .attr("x",xrange[parseInt(weekday)-1]+margin.left+offset)
-                    .attr("y",r[parseInt(curritime)-1]+margin.top)
+                    .attr("x",basicX)
+                    //.attr("y",r[parseInt(curritime)-1]+margin.top)
+                    .attr("y",basicY)
                     .attr("width",alljson[weekday][curritime]["curri"][d]["t"]/maxValue*axisWidth)
-                    .attr("height",parseFloat(alljson[weekday][curritime]["curri"][d]["aver"])*10)
-                    .attr("fill","blue");
+                    //.attr("height",parseFloat(alljson[weekday][curritime]["curri"][d]["aver"])*10)
+                    .attr("height",10)
+                    .attr("fill",curriLengthColorDic[alljson[weekday][curritime]["curri"][d]["aver"]]);
+                basicX=basicX+alljson[weekday][curritime]["curri"][d]["t"]/maxValue*axisWidth;
             });
         });
     });
 }
 
+function generateExample(cDic,lColor){
+    var basicX=margin.left-35;
+    var basicY=margin.top;
+    var gridLength=10;
+    var lrec=svg.append("rect")
+        .attr("x",basicX)
+        .attr("y",basicY)
+        .attr("width",gridLength)
+        .attr("height",gridLength)
+        .attr("fill",lColor);
+    var ctex=svg.append('text')
+        .text('图书馆')
+        .attr("x",basicX+1.5*gridLength)
+        .attr('y',basicY+gridLength)
+        .attr('text-anchor',"start")
+        .attr('font-size',10);
+    basicY=basicY+1.5*gridLength;
+    for(var key in cDic){
+        var crec=svg.append("rect")
+            .attr("x",basicX)
+            .attr("y",basicY)
+            .attr("width",gridLength)
+            .attr("height",gridLength)
+            .attr("fill",cDic[key]);
+        var ctex=svg.append('text')
+            .text("课程(周平均:"+String(key)+")")
+            .attr("x",basicX+1.5*gridLength)
+            .attr('y',basicY+gridLength)
+            .attr('text-anchor',"start")
+            .attr('font-size',10);
+        basicY=basicY+1.5*gridLength;
+    }
 
-
-
- 
-    /*
-    var group = svg.selectAll("g.layer")
-			.data(d3.stack().keys(keys)(data), d => d.key)
-	group.exit().remove()
-    group.enter().append("g")
-        .classed("layer", true)
-        .attr("fill", d => z(d.key));
-
-    var bars = svg.selectAll("g.layer").selectAll("rect")
-        .data(d => d, e => e.data.curri);
-
-    bars.exit().remove()
-    //矩形绘制
-    bars.enter().append("rect")
-        .attr("width", x.bandwidth())
-        .merge(bars)
-    .transition().duration(speed)
-        .attr("x", d => x(d.data.curri))
-        .attr("y", d => y(d[1]))
-        .attr("height", d => y(d[0]) - y(d[1]))
-    */
-
-
-
+    
+}
 </script>
+
 <style>
     .weekday-axis path {
         display: none;
